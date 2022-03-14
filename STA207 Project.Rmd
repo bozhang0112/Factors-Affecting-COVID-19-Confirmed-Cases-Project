@@ -1,0 +1,497 @@
+---
+title: "STA207 project -- Analysis on Factors Affecting the Confirmed Cases Amount of COVID-19"
+author: "Bo Zhang"
+date: "2/18/2022"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+***
+## Abstract
+
+Coronavirus disease 2019 (COVID-19) is a contagious desease caused by SARS-CoV-2. The main symptoms for COVID-19 are fever, cough, difficulty breathing, fatigue and diarrhea with an incubation period between 1 to 14 days. According to World Health Organization, there have been 452,201,564 confirmed cases including 6,029,852 deaths of COVID-19 since this pandemic started As of March 13 2022. Since around 1/3 of infected person are asymptomatic carrier, it would be really difficult for government and people to be prepared and free from infection. Therefore, reserachers are dedicated to find the factors which would be most significant to the amount of confirmed cases for each country. 
+
+This project would use a two-way ANOVA model to mainly investigate the influence of two factors: human development degree and population density affecting the number of confirmed cases among the whole world. A comprehensive data preprocessing is done to tidy the data set, including handling missing values and split groups of each factor. Exploratory data analysis is conducted to better understand the data, such as the distributions and level differences. After that, the ANOVA model has been constructed, investigated and evaluated. 
+
+As a result, the significant factor level has been tested and selected. Also, further discussions are made for the models, data set, and the entire analysis process at the end of this project. 
+
+
+***
+## Introduction 
+
+### Background
+
+Based on current research, there is enough evidence showing that the social distance will affect the rate of infection since the main affection way of COVID-19 virus is via airborne particles and droplets. Therefore, it's straight forward to think about the influence of population density level on the confirmed cases amount. Besides, we would consider that maybe for developed country, there will be better ways to prevent and treat the virus, but for underdeveloped country, maybe there isn't enough resources to prevent the spread of the virus. Therefore, it lead to another curiosity of is there significant difference for the influence of different development level on the amount of confirmed cases. 
+
+
+### Question of Interest
+
+Does the level of country development and different density level of population have a significant difference on the rate of new cases reported among the whole world? To be more specified, group the countries as developed countries(very high developing level), developing countries(high developing level and medium developing level) and underdeveloped countries(low developing level), to analyze is there any major influence of the level of development level on the amount of new cases. The second factor is to analyze the influence of different population density level on the amount of new cases. 
+
+***
+## Dataset Wrangling
+
+### Dataset Introduction
+```{r,echo = FALSE, include=FALSE}
+# all the packages needed in this project
+library(rmdformats)
+library(tidyverse)
+library(car)
+library(dplyr)
+library(ggplot2)
+library(gplots)
+library(stats)
+library(DT)
+library(pander)
+```
+
+```{r,echo = FALSE, include=FALSE}
+## read in the dataset
+covid <- read_csv("covid.csv")
+corona <- read_csv("owid-covid-data.csv")
+isocode <- read_csv("iso_code.csv")
+colnames(covid)
+colnames(corona)
+colnames(isocode)
+```
+
+There are 2 main datasets and 2 extra datasets being used in this project: 
+
+**WHO cumulative covid cases dataset**
+<br>The first data set is retrieved from World Health Organization, which contains the daily cases and deaths by date reported to WHO from 01/03/2020, the beginning of the pandemic, to 03/01/2022. There are `r nrow(covid)` rows and `r ncol(covid)` columns  in total, the part will be included in the project is: 
+
+| Column_Name | Description |
+| :--------: | :-----: |
+|__Date_reported__|Date of reporting to WHO|
+|__Country_code__|ISO Alpha-2 country code|
+|__Country__|Country/territory/area|
+|__Cumulative_cases__|Cumulative confirmed cases reported to date|
+
+**Our World In Data economic and population dataset**
+<br>The second data set is retrieved from Our World In Data, which contains the daily cases from 01/03/2020 to 03/01/2022, basic information of each country, such as gdp, population, amount of hospital, etc. There are `r nrow(corona)` rows and `r ncol(corona)` columns inside the dataset. The part will be included in later analysis is:
+
+| Column_Name | Description |
+| :--------: | :-----: |
+|__date__|Date of reporting|
+|__iso_code__|ISO Alpha-3 country code|
+|__location__|Country/territory/area|
+|__total_cases__|Cumulative confirmed cases reported to date|
+|__total_cases_per_million__|Cumulative confirmed cases per 1 million people|
+|__population__|population for each area|
+|__population_density__|the number of people per square kilometer|
+|__gdp_per_capita__|a country's GDP divided by the population|
+|__human_development_index__|a summary measure of the level of a country's social and economic development|
+
+**International Organization for Standardization country code dataset**
+<br>The third data set has been used is retrieved from the International Organization for Standardization, which include the country name and country ISO code. It contains 249 rows and 3 columns. 
+
+| Column_Name | Description |
+| :--------: | :-----: |
+|__English_short_name__|Country/territory/area|
+|__Alpha-2 code__|ISO Alpha-2 country code|
+|__Alpha-3 code__|ISO Alpha-3 country code|
+
+**Our World In Data human development index dataset**
+<br>The fourth data set is retrieved from Our World In Data, which include a complete list of human development index updated to the year of 2022 for each country/area. It contains 229 rows and 3 columns. 
+
+| Column_Name | Description |
+| :--------: | :-----: |
+|__Country__|Country/territory/area|
+|__Continent__|which continent should this country belongs to|
+|__HDI__|human development index, a summary measure of the level of a country's social and economic development|
+
+
+### Data Preprocessing
+
+#### feature selection
+```{r,echo = FALSE, include=FALSE}
+cumu_cases <- select(covid, Date_reported, Country_code, Country, Cumulative_cases)
+cumu_cases <- cumu_cases %>%
+ group_by(Country) %>% 
+ arrange(Date_reported) %>% 
+ summarise_all(last)
+
+econ <- select(corona, date, iso_code, location, total_cases, total_cases_per_million, population, population_density, gdp_per_capita, human_development_index)
+econ <- econ %>%
+ filter(nchar(econ$iso_code) == 3) %>%
+ group_by(location) %>% 
+ arrange(date) %>% 
+ summarise_all(last)
+
+isocode <- select(isocode, 'English short name', 'Alpha-2 code', 'Alpha-3 code')
+```
+
+```{r,echo = FALSE, include=FALSE}
+new_cumu_cases <- merge(cumu_cases, isocode, by.x = 'Country_code', by.y = 'Alpha-2 code')
+new_cumu_cases <- select(new_cumu_cases, -'English short name')
+complete <- merge(new_cumu_cases, econ, by.x = 'Alpha-3 code', by.y = 'iso_code')
+colnames(complete)
+complete <- select(complete, Country, date, total_cases_per_million, population_density, human_development_index)
+colSums(is.na(complete))
+write.csv(complete,"complete.csv", row.names = FALSE)
+```
+
+
+Based on our question of interest, to analyze the impact of country development level and population density level on the confirmed cases among the whole world. Since the cumulative cases has been keep adding the new confirmed cases every day, the data has been reorganized as choosing only the cumulative confirmed cases from the most recent date for each country. We could clearly see that there exists several 6-digit code under the ISO Alpha country code in the second dataset, which are self-defined categories such as income level, the dataset has been used for further analysis keeps only legally authorized country/territory/area. 
+
+In order to join the two dataset for developing future analysis, the most consistent variable could be used would be the ISO Alpha-2 country code and ISO Alpha-3 country code. The third dataset has been used to match these two type of code correspondingly. 
+
+```{r,echo = FALSE, include=TRUE}
+datatable(complete, options = list(pageLength = 5))
+```
+
+
+#### Missing Values
+```{r,echo = FALSE, include=FALSE}
+colSums(is.na(complete))
+updated <- read.csv('updated.csv')
+colnames(updated)
+colSums(is.na(updated))
+updated <- na.omit(updated)
+colnames(updated)
+colSums(is.na(updated))
+```
+
+After combined these two dataset together, according to the missing value table below there are 15 missing values for population density, and 31 missing values for human development index. It's around 15% of the total data which is not reasonable to remove all missing values. Therefore, the fourth dataset has been used to fill in the missing population density and human_development_index. There still exists 6 country/area doesn't provide any valid data that could be used to fill in manually. In this case, I decided to remove them. 
+
+For those countries have 0 cumulative cases and 0 cumulative cases per million, are mainly island country where mostly rely on marine transportation, have only few air route or even no air route. These countries are restricting travel and even instituting a national lock down in the early stages of the pandemic, which makes them successfully prevented from COVID-19 virus. Therefore I decided to not research those 0 confirmed cases since they could be seen as completely independent area with all other countries among the world. The main focus is on the influence of HDI and density level on confirmed cases, for those don't have cases at all, we can ignore them at this stage. 
+
+|            | Country | Date_reproted | total_cases_per_million | population_density | human_development_index |
+| :--------: | :-----: | :-----------: | :---------------------: | :----------------: | :---------------------: |
+|__Raw Data__|0|0|9|15|31|
+|__Combined Data__|0|0|9|4|6|
+|__NA Omitted Data__|0|0|0|0|0|
+
+
+#### Categorical Variable Processing
+```{r,echo = FALSE, include=FALSE}
+updated$HDI[which(updated$human_development_index >=0.55 & updated$human_development_index <0.7)] = 'medium'
+updated$HDI[which(updated$human_development_index <0.55)] = 'low'
+updated$HDI[which(updated$human_development_index >=0.8)] = 'veryhigh'
+updated$HDI[which(updated$human_development_index >=0.7 & updated$human_development_index <0.8)] = 'high'
+
+updated$density_level = '0'
+updated$density_level[which(updated$population_density < 5)] = 'very sparse'
+updated$density_level[which(updated$population_density >= 5 & updated$population_density < 16)] = 'sparse'
+updated$density_level[which(updated$population_density >= 16 & updated$population_density < 50)] = 'moderate'
+updated$density_level[which(updated$population_density >= 50 & updated$population_density < 100)] = 'dense'
+updated$density_level[which(updated$population_density >= 100)] = 'very dense'
+
+table(updated$density_level)
+table(updated$HDI)
+table(updated$density_level, updated$HDI)
+
+colnames(updated)[3] <- 'cases_percentage'
+```
+
+In order to discover the answer for our question of interest, I need to further tidy up the dataset. 
+
+For the first factor 'human development index level', according to World Population Review, people usually set the level of HDI as: very high human development (0.8-1.0), high human development (0.7-0.79), medium human development (0.55-.70), and low human development (below 0.55). 
+<br>For the second factor 'population density level', I decided to set the level using the amount of people per square kilometer as: very dense population density(>=150), dense population density(80-150), moderate population density(10-80), sparse population density(3-10), very sparse population density(<3). Table is showing below. 
+
+|          | very high | high | medium | low | total |
+| :------: | :-------: | :--: | :----: | :-: | :---: |
+|__very dense__|41|26|12|10|89|
+|__dense__|13|11|12|10|46|
+|__moderate__|17|11|10|10|48|
+|__sparse__|5|3|1|3|12|
+|__very sparse__|5|4|3|1|13|
+|__total__||81|55|38|34|
+
+
+#### Data Transformation
+```{r,echo = FALSE, include=TRUE}
+par(mfcol=c(1,2)) 
+hist(updated$cases_percentage)
+hist((updated$cases_percentage)^(1/3))
+
+par(mfcol=c(1,2)) 
+boxplot(updated$cases_percentage)
+boxplot((updated$cases_percentage)^(1/3))
+```
+
+```{r,echo = FALSE, include=TRUE}
+df <- select(updated, Country, cases_percentage, HDI, density_level)
+df$HDI <- as.factor(df$HDI)
+df$density_level <- as.factor(df$density_level)
+df$Country <- as.factor(df$Country)
+df$cases_trans <- (df$cases_percentage)^(1/3)
+df <- select(df, Country, cases_trans, HDI, density_level)
+```
+
+For our response variable cumulative cases, we could clearly see that based on the histogram, boxplot, and scatter plot, the distribution is strictly right tailed, and the numerical range of the response variable is really significant, from 1 to 10^6. After trying multiple transformation on the response variable, as shown in the comparison diagram, a cube root transformation is a good solution to the severely right tailed distribution and eventually make it an approximately normal distribution, which could be used for further study. 
+
+Besides, two factors will be used in further study has been set as factor variables. 
+
+Our final dataset is shown below: 
+
+```{r,echo = FALSE, include=TRUE}
+datatable(df, options = list(pageLength = 5))
+```
+***
+## Data Exploratory
+```{r,echo = FALSE, include=TRUE}
+#boxplots: 
+ggplot(df, aes(x = density_level, y = cases_trans)) +
+  geom_boxplot(aes(colour = density_level)) + 
+  labs(x="Populaion Density level", y='Rescaled Confirmed Cases Number', title="Boxplot for Population Density Level")
+
+ggplot(df, aes(x = HDI, y = cases_trans)) +
+  geom_boxplot(aes(colour = HDI)) + 
+  labs(x="Human Development Index", y='Rescaled Confirmed Cases Number', title="Boxplot for Human Development Index")
+
+ggplot(df, aes(x = HDI, y = cases_trans)) +
+  geom_boxplot(aes(colour = density_level)) + 
+  labs(x="Human Development Index", y='Rescaled Confirmed Cases Number', title = "boxplot for interaction of density level and HDI")
+
+ggplot(df, aes(x = HDI, y = cases_trans, color=factor(density_level)))+geom_point()  + 
+  labs(x="Human Development Index", y='Rescaled Confirmed Cases Number', title="Scatterplot for Human Development Index")
+
+ggplot(df, aes(x = density_level, y = cases_trans, color=factor(HDI)))+geom_point() + 
+  labs(x="Populaion Density level", y='Rescaled Confirmed Cases Number', title="Scatterplot for Population Density Level")
+```
+
+According to the box plot above, it is clearly showing that there exist a difference for different level of both factor HDI and population density. And within each level of HDI, there exists difference for different population density. 
+
+
+```{r,echo = FALSE, include=TRUE, warning=FALSE}
+# Main effect plot for density level
+plotmeans(cases_trans~density_level,data=df,xlab="Population Density Level",ylab="Rescaled Confirmed Cases Number", main="Main effect for population density level", col = 2)
+# Main effect plot for HDI
+plotmeans(cases_trans~HDI,data=df,xlab="Human Development Index",ylab="Rescaled Confirmed Cases Number", main="Main effect for Human Development Index", col = 2) 
+#Interaction plot
+interaction.plot(df$density_level, df$HDI, df$cases_trans, ylab="Rescaled Confirmed Cases Number",xlab='population & density level', main="Main effect for interactions",col = c(2,3,4,7), lty = 1)
+
+```
+
+According to our main effect plots, we could see that the line in three plots are all not horizontal, which means that there is a significant effect for HDI level and population density level on the cumulative cases amount per million population. Increasing in population density generally lead to less confirmed cases number; Higher HDI level generally lead to more confirmed cases. 
+<br>Besides, the interaction terms seems not very significant to confirmed cases amount, which will be determined in later model constructions.
+
+Thus a two-way ANOVA model will be used to investigate the influence of each factor on the response variable. 
+
+***
+## Model Construction
+
+Two two-way ANOVA models would be constructed for future analysis. 
+
+<br>
+**Full Model:**
+
+We would define the two-way ANOVA **full model** as: 
+$$Y_{ijk} = \mu_{..} + \alpha_i + \beta_j + \alpha\beta_{ij} + \epsilon_{ijk}$$
+
+- **Index: **
+  - index i represents the HDI level: low (i=1), medium (i=2), high (i=3), and very high (i=4)
+  - index j represents the population density level: very sparse (i=1), sparse (i=2), moderate (i=3), dense (i=4), very dense (i=5)
+  - index k represents the country/territory/area. 
+
+- **Parameter: **
+  - $\mu_{..}$ is the mean cumulative cases number among all countries. 
+  - $\alpha_i$ represents the average cumulative cases number for each HDI level, which is the mean factor effect on HDI level; $$\alpha_i = \mu_{i.}-\mu_{..}$$
+  - $\beta_j$, represents the average cumulative cases number for each population density level, which is the mean factor effect on population density level; $$\beta_j = \mu_{.j}-\mu_{..}$$
+  - $\alpha\beta_{ij}$ represents the average cumulative cases number for the interaction term of each pair of population density level and HDI level, which is the mean factor effect on interaction of HDI and population density level. $$\alpha\beta_{ij} = \mu_{ij}-\mu_{i.}-\mu_{.j}-\mu_{..}$$
+  - $\epsilon_{ijk}$ represents the error term for each country, which should follows the normal distribution. 
+  - $Y_{ijk}$ is the cumulative cases number for each country, having HDI level i and population density level j. 
+
+- **Constrains: **
+
+  $$\sum\alpha_i = \sum\beta_j=0$$
+  $$\sum_{i=1}^a(\alpha\beta_{ij}) = \sum_{j=1}^b(\alpha\beta_{ij}) = 0$$
+  
+- **Assumptions: **
+  - the residuals are independent, and identically distributed, have equal variance
+  - the variables are categorized
+  - there isn't any significant outlier
+  
+<br>
+<br>
+**Reduced Model:**
+
+We would define the two-way ANOVA **reduced model** as 
+$$Y_{ijk} = \mu_{..} + \alpha_i + \beta_j + \epsilon_{ijk}$$
+
+- **Index:**
+  - index i represents the HDI level: low (i=1), medium (i=2), high (i=3), and very high (i=4)
+  - index j represents the population density level: very sparse (i=1), sparse (i=2), moderate (i=3), dense (i=4), very dense (i=5)
+  - index k represents the country/territory/area. 
+
+- **Parameter: **
+  - $\mu_{..}$ is the mean cumulative cases number among all countries. 
+  - $\alpha_i$ represents the average cumulative cases number for each HDI level, which is the mean factor effect on HDI level; $$\alpha_i = \mu_{i.}-\mu_{..}$$
+  - $\beta_j$, represents the average cumulative cases number for each population density level, which is the mean factor effect on population density level; $$\beta_j = \mu_{.j}-\mu_{..}$$
+  - $\epsilon_{ijk}$ represents the error term for each country, which should follows the normal distribution. 
+  - $Y_{ijk}$ is the cumulative cases number for each country, having HDI level i and population density level j. 
+
+- **Constrains: **
+
+  $$\sum\alpha_i=\sum\beta_j=0$$
+  
+- **Assumptions: **
+  - the residuals are independent, and identically distributed, have equal variance
+  - the variables are categorized
+  - there isn't any significant outlier
+
+
+```{r,echo = FALSE, include=TRUE}
+full_model=lm(cases_trans~HDI+density_level+HDI*density_level,data=df);
+reduced_model=lm(cases_trans~density_level+HDI,data=df);
+pander(anova(reduced_model,full_model))
+```
+
+Based on the ANOVA table of full model and reduced model above, $Pr(>F) = 0.3564$ for full model, which means that there isn't enough evidence to reject the reduced model. Therefore, reduced model will be used and interaction term will be dropped for future investigation. 
+
+
+<br>
+<br>
+**Hypothesis Test on Reduced Model: **
+```{r,echo = FALSE, include=TRUE}
+# Fit the chosen model:
+sig.level=0.05;
+anova.fit<-aov(cases_trans~HDI+density_level,data=df)
+pander(summary(anova.fit))
+```
+
+$$Pr(>F): P(HDI) < 2.2*10^{-16}$$
+$$Pr(>F): P(density)=5.83*10^{-9}$$
+Based on the anova and the summary table of the reduced model above, we could see that all p-value are smaller than 0.05, which means that both two factors HDI level and population density level have statistically significant impact on the response variable 'confirmed cases number per million'. The estimated coefficients for both variables are included in the summary table above. 
+
+```{r,echo = FALSE, include=TRUE}
+pander(summary(reduced_model))
+```
+
+Therefore, based on $\alpha = 0.05$, we are 95% confidence that every level of both factors, except density level 'moderate' and 'very sparse', is significant to the amount of confirmed cases. 
+
+We will explore whether there exists a combination such that it has the most significant influence on the cases amount, and if possible, which combination of factor is. 
+
+<br>
+<br>
+**Significant difference within groups**
+```{r,echo = FALSE, include=TRUE}
+# Find the best combination
+T.ci=TukeyHSD(anova.fit,conf.level = 1-sig.level)
+par(mfrow=c(1,2))
+plot(T.ci, las=1 , col="brown")
+```
+From the plot of pairwise confidence interval, we could conclude that we are 95% sure that all HDI level exist significant difference on confirmed cases amount; 
+Besides, we are 95% confidence that for density level, the pair `'very sparse' & 'sparse'`, and `'very dense' & 'sparse'` exist significant difference on confirmed cases amount. 
+
+<br>
+<br>
+**Most Significant Pair of Group**
+
+The table below shows the difference of the mean within each group, the cell having largest means is `(very high, very dense)`, which means that if a country is having very dense population density and very high human development Index, then it has the largest probability of having the most confirmed cases amount of COVID-19. 
+
+```{r,echo = FALSE, include=TRUE}
+# differences of means
+idx=list();
+idx[[1]]=df$HDI;idx[[2]]=df$density_level
+pander(tapply(df$cases_trans, INDEX=idx,mean))
+```
+<br>
+<br>
+
+***
+## Sensitivity Analysis
+```{r,echo = FALSE, include=TRUE}
+# Diagnostic plots
+par(mfcol=c(1,2)) 
+plot(anova.fit,cex.lab=1.2,which=1:2)
+```
+
+According to the residual plot of the fitted model, we could see that the residuals don't have clear pattern, and from the qq-plot, they scattered evenly in the middle part of this distribution. However, the left end of the shape is not scattered around the line evenly, which is kind of not normal. Thus we could apply a Shapiro-Wirk test and a Levene's test on our dataset to check the normality and the equality of variance. 
+
+<br>
+**Testing for normality: **
+```{r,echo = FALSE, include=TRUE}
+#Shapiro-Wirk test
+pander(shapiro.test(anova.fit$residuals))
+```
+
+**Shapiro-Wirk test**
+<br>Null Hypothesis: the residuals are normally distributed.
+<br>Alternative Hypothesis: the residuals are not normally distributed.
+
+Since $Pr(>F) = 5.544*10^{-6}$, at the significant level $\alpha = 0.05$, we could reject the null hypothesis, and conclude that the residuals of our model are normally distributed.  
+
+<br>
+**Testing for equal variance: **
+```{r,echo = FALSE, include=TRUE}
+# Levene test:
+pander(leveneTest(cases_trans ~ interaction(HDI,density_level), data = df))
+```
+
+**Levene's test**
+<br>Null Hypothesis: the population variances for each group are equal. 
+<br>Alternative Hypothesis: at least two of the population variance are different from other groups.
+
+since $Pr(>F) = 0.07$, at the significant level $\alpha = 0.05$, we could not reject the null hypothesis. Thus we conclude that there isn't enough evidence showing that at least two of the variances from these groups are different.  
+
+***
+## Causal Inference
+
+Based on the question of interest, to analyze is there an independent, actual effect for the factors Human Development Index and Population Density among the whole system, it would be needed to bring in a causal inference to determine the illustrate if it is a causation or a correlation. 
+
+To test the causation of Human Development Index, we would design an experiment in which the only independent variable among this experiment would be Human Development Index on a series of observations. To be specifically, we would have a list of countries, all other characteristics would be the same: similar location, population, population density, climate, policy, start date of the pandemic (even the start date of all variant of COVID-19), etc. The only variable on these countries would be Human Development Index. For example, 1 underdeveloped country, 1 developing country, and 1 developed country. We would observe the amount of confirmed cases after a certain time period, and analyze the data to get the conclusion of the actual influence of different Human Development Index on confirmed cases. However, it is impossible to have several countries having all other conditions exactly the same or at least approximately same. 
+
+It would be the same circumstance for the other factor Population density. It is impossible to have several countries having the only difference is the population density, all other conditions such as geography, weather, temperature, vaccination type, vaccination rate, etc., are exactly the same or at least approximately at the same level. 
+<br>
+<br>
+
+***
+## Conclusion 
+
+To wrap up the result of the model in this analysis, it could be conclude that both factors Human Development Index and Population Density of an area/country would have an influence on the confirmed cases amount. 
+
+***
+## Discussion & Limitation
+
+1. different country have different policy. 
+2. people from poor area may not have enough attention on the pandemic. 
+3. people's regular life cannot be garanteed, how could they consider the illness of this kind of uncontrolable disease. 
+4. hard to quaranteen infected people, thus population density cannot reprensent each family. It may have cluster of infection within each family. 
+
+
+***
+## Acknowledgement {-}
+
+Xinyi Li, Xinyue Hu, Xiquan Jiang, Xiaoran Zhu
+
+***
+## Reference {-}
+
+The covid dataset: https://covid19.who.int/WHO-COVID-19-global-data.csv
+
+The Population density dataset: https://ourworldindata.org/coronavirus
+
+The iso code dataset: https://www.iso.org/obp/ui/#search
+
+HDI dataset: https://ourworldindata.org/human-development-index
+
+https://worldpopulationreview.com/country-rankings/hdi-by-country
+
+https://en.populationdata.net/rankings/hdi/
+
+https://statisticstimes.com/demographics/countries-by-population-density.php
+
+https://www.usnews.com/news/best-countries/slideshows/countries-without-reported-covid-19-cases?slide=5
+
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0242398
+
+https://www.epa.gov/coronavirus/indoor-air-and-coronavirus-covid-19#:~:text=Spread%20of%20COVID%2D19,coughing%2C%20sneezing).
+
+## Appendix - R Code{-}
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
+
+## Session info {-}
+```{r}
+sessionInfo()
+```
