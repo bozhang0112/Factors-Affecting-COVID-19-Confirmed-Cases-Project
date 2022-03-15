@@ -16,11 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ***
 ## Abstract
 
-Coronavirus disease 2019 (COVID-19) is a contagious desease caused by SARS-CoV-2. The main symptoms for COVID-19 are fever, cough, difficulty breathing, fatigue and diarrhea with an incubation period between 1 to 14 days. According to World Health Organization, there have been 452,201,564 confirmed cases including 6,029,852 deaths of COVID-19 since this pandemic started As of March 13 2022. Since around 1/3 of infected person are asymptomatic carrier, it would be really difficult for government and people to be prepared and free from infection. Therefore, reserachers are dedicated to find the factors which would be most significant to the amount of confirmed cases for each country. 
+Coronavirus disease 2019 (COVID-19) is a contagious desease caused by SARS-CoV-2. The main symptoms for COVID-19 are fever, cough, difficulty breathing, fatigue and diarrhea with an incubation period between 1 to 14 days. According to World Health Organization, there have been 452,201,564 confirmed cases including 6,029,852 deaths of COVID-19 since this pandemic started as of March 13 2022. Since around 1/3 of infected person are asymptomatic carrier, it would be really difficult for government and people to be prepared and free from infection. Therefore, researchers are dedicated to find significant factors to the amount of confirmed cases for each country. 
 
 This project would use a two-way ANOVA model to mainly investigate the influence of two factors: human development degree and population density affecting the number of confirmed cases among the whole world. A comprehensive data preprocessing is done to tidy the data set, including handling missing values and split groups of each factor. Exploratory data analysis is conducted to better understand the data, such as the distributions and level differences. After that, the ANOVA model has been constructed, investigated and evaluated. 
 
-As a result, the significant factor level has been tested and selected. Also, further discussions are made for the models, data set, and the entire analysis process at the end of this project. 
+As a result, the significant factor level has been tested and selected. Also, further discussions are made for the models, dataset, and the entire analysis process at the end of this project. 
 
 
 ***
@@ -33,7 +33,9 @@ Based on current research, there is enough evidence showing that the social dist
 
 ### Question of Interest
 
-Does the level of country development and different density level of population have a significant difference on the rate of new cases reported among the whole world? To be more specified, group the countries as developed countries(very high developing level), developing countries(high developing level and medium developing level) and underdeveloped countries(low developing level), to analyze is there any major influence of the level of development level on the amount of new cases. The second factor is to analyze the influence of different population density level on the amount of new cases. 
+Does the level of country development and different density level of population have a significant difference on the rate of new cases reported among the whole world? 
+<br>To be more specified, group the countries as `developed countries`(very high developing level), `developing countries`(high developing level and medium developing level) and `underdeveloped countries`(low developing level), to analyze is there any major influence of the level of development level on the amount of new cases. 
+<Br>The second factor is to analyze the influence of different `population density level` on the amount of new cases. 
 
 ***
 ## Dataset Wrangling
@@ -65,7 +67,7 @@ colnames(isocode)
 There are 2 main datasets and 2 extra datasets being used in this project: 
 
 **WHO cumulative covid cases dataset**
-<br>The first data set is retrieved from World Health Organization, which contains the daily cases and deaths by date reported to WHO from 01/03/2020, the beginning of the pandemic, to 03/01/2022. There are `r nrow(covid)` rows and `r ncol(covid)` columns  in total, the part will be included in the project is: 
+<br>The first data set is retrieved from World Health Organization (https://covid19.who.int/WHO-COVID-19-global-table-data.csv), which contains the daily cases and deaths by date reported to WHO from 01/03/2020, the beginning of the pandemic, to 03/01/2022. There are `r nrow(covid)` rows and `r ncol(covid)` columns  in total, the part will be included in the project is: 
 
 | Column_Name | Description |
 | :--------: | :-----: |
@@ -75,7 +77,7 @@ There are 2 main datasets and 2 extra datasets being used in this project:
 |__Cumulative_cases__|Cumulative confirmed cases reported to date|
 
 **Our World In Data economic and population dataset**
-<br>The second data set is retrieved from Our World In Data, which contains the daily cases from 01/03/2020 to 03/01/2022, basic information of each country, such as gdp, population, amount of hospital, etc. There are `r nrow(corona)` rows and `r ncol(corona)` columns inside the dataset. The part will be included in later analysis is:
+<br>The second data set is retrieved from Our World In Data (https://ourworldindata.org/coronavirus), which contains the daily cases from 01/03/2020 to 03/01/2022, basic information of each country, such as gdp, population, amount of hospital, etc. There are `r nrow(corona)` rows and `r ncol(corona)` columns inside the dataset. The part will be included in later analysis is:
 
 | Column_Name | Description |
 | :--------: | :-----: |
@@ -90,7 +92,7 @@ There are 2 main datasets and 2 extra datasets being used in this project:
 |__human_development_index__|a summary measure of the level of a country's social and economic development|
 
 **International Organization for Standardization country code dataset**
-<br>The third data set has been used is retrieved from the International Organization for Standardization, which include the country name and country ISO code. It contains 249 rows and 3 columns. 
+<br>The third data set has been used is retrieved from the International Organization for Standardization (https://www.iso.org/obp/ui/#search), which include the country name and country ISO code. It contains 249 rows and 3 columns. 
 
 | Column_Name | Description |
 | :--------: | :-----: |
@@ -99,7 +101,7 @@ There are 2 main datasets and 2 extra datasets being used in this project:
 |__Alpha-3 code__|ISO Alpha-3 country code|
 
 **Our World In Data human development index dataset**
-<br>The fourth data set is retrieved from Our World In Data, which include a complete list of human development index updated to the year of 2022 for each country/area. It contains 229 rows and 3 columns. 
+<br>The fourth data set is retrieved from Our World In Data (https://ourworldindata.org/human-development-index), which include a complete list of human development index updated to the year of 2022 for each country/area. It contains 229 rows and 3 columns. 
 
 | Column_Name | Description |
 | :--------: | :-----: |
@@ -139,7 +141,7 @@ write.csv(complete,"complete.csv", row.names = FALSE)
 ```
 
 
-Based on our question of interest, to analyze the impact of country development level and population density level on the confirmed cases among the whole world. Since the cumulative cases has been keep adding the new confirmed cases every day, the data has been reorganized as choosing only the cumulative confirmed cases from the most recent date for each country. We could clearly see that there exists several 6-digit code under the ISO Alpha country code in the second dataset, which are self-defined categories such as income level, the dataset has been used for further analysis keeps only legally authorized country/territory/area. 
+Based on our question of interest, to analyze the impact of country development level and population density level on the confirmed cases among the whole world. Since the cumulative cases has been keep adding the new confirmed cases every day, the data has been reorganized as choosing only the cumulative confirmed cases from the most recent date for each country, which is March 01, 2022. We could clearly see that there exists several 6-digit code under the ISO Alpha country code in the second dataset, which are self-defined categories such as income level, the dataset has been used for further analysis keeps only legally authorized country/territory/area. 
 
 In order to join the two dataset for developing future analysis, the most consistent variable could be used would be the ISO Alpha-2 country code and ISO Alpha-3 country code. The third dataset has been used to match these two type of code correspondingly. 
 
@@ -159,9 +161,9 @@ colnames(updated)
 colSums(is.na(updated))
 ```
 
-After combined these two dataset together, according to the missing value table below there are 15 missing values for population density, and 31 missing values for human development index. It's around 15% of the total data which is not reasonable to remove all missing values. Therefore, the fourth dataset has been used to fill in the missing population density and human_development_index. There still exists 6 country/area doesn't provide any valid data that could be used to fill in manually. In this case, I decided to remove them. 
+After combined these two dataset together, according to the missing value table below, there are 15 missing values for population density, and 31 missing values for human development index. It's around 15% of the total data which is not reasonable to remove all missing values. Therefore, the fourth dataset has been used to fill in the missing population density and human_development_index. There still exists 6 country/area doesn't provide any valid data that could be used to fill in manually. In this case, I decided to remove them. 
 
-For those countries have 0 cumulative cases and 0 cumulative cases per million, are mainly island country where mostly rely on marine transportation, have only few air route or even no air route. These countries are restricting travel and even instituting a national lock down in the early stages of the pandemic, which makes them successfully prevented from COVID-19 virus. Therefore I decided to not research those 0 confirmed cases since they could be seen as completely independent area with all other countries among the world. The main focus is on the influence of HDI and density level on confirmed cases, for those don't have cases at all, we can ignore them at this stage. 
+Countries which have 0 cumulative cases and 0 cumulative cases per million, are mainly island country where mostly rely on marine transportation, have only few air route or even no air route. These countries are restricting travel and even instituting a national lock down in the early stages of the pandemic, which makes them successfully prevented from COVID-19 virus. Therefore I decided to not research those 0 confirmed cases since they could be seen as completely independent area with all other countries among the world. The main focus is on the influence of HDI and density level on confirmed cases, for those don't have cases at all, we can ignore them at this stage. 
 
 |            | Country | Date_reproted | total_cases_per_million | population_density | human_development_index |
 | :--------: | :-----: | :-----------: | :---------------------: | :----------------: | :---------------------: |
@@ -258,7 +260,7 @@ ggplot(df, aes(x = density_level, y = cases_trans, color=factor(HDI)))+geom_poin
   labs(x="Populaion Density level", y='Rescaled Confirmed Cases Number', title="Scatterplot for Population Density Level")
 ```
 
-According to the box plot above, it is clearly showing that there exist a difference for different level of both factor HDI and population density. And within each level of HDI, there exists difference for different population density. 
+According to the box plot above, it is clearly showing that there exist a difference for different level of both factor HDI and population density. And within each level of HDI, there exists difference for different population density. Based on the scatter plot grouped by the factors, points are not scattered evenly on the plot, there is a clear different distribution for different levels, especially for the factor Population Density Level: as the population density increasing, the comfirmed cases amount appear to be larger. 
 
 
 ```{r,echo = FALSE, include=TRUE, warning=FALSE}
@@ -379,8 +381,7 @@ T.ci=TukeyHSD(anova.fit,conf.level = 1-sig.level)
 par(mfrow=c(1,2))
 plot(T.ci, las=1 , col="brown")
 ```
-From the plot of pairwise confidence interval, we could conclude that we are 95% sure that all HDI level exist significant difference on confirmed cases amount; 
-Besides, we are 95% confidence that for density level, the pair `'very sparse' & 'sparse'`, and `'very dense' & 'sparse'` exist significant difference on confirmed cases amount. 
+From the plot of pairwise confidence interval, we could conclude that we are 95% sure that all HDI level exist significant difference on confirmed cases amount, the group `'very high' & 'low'` exists largest difference on total confirmed cases; Besides, we are 95% confidence that for density level, the pair `'very dense' & 'sparse'` exists significant difference on confirmed cases amount; . 
 
 <br>
 <br>
@@ -445,46 +446,43 @@ It would be the same circumstance for the other factor Population density. It is
 <br>
 
 ***
-## Conclusion 
+## Conclusion & Discussion
 
-To wrap up the result of the model in this analysis, it could be conclude that both factors Human Development Index and Population Density of an area/country would have an influence on the confirmed cases amount. 
+To wrap up the result of the model in this analysis, it could be conclude that both factors Human Development Index and Population Density of an area/country would have a significant influence on the confirmed cases amount. The factor Human Development Index is especially significant for the amount of confirmed cases. 
+
+We usually have an intuition that country have higher population density should have more confirmed cases based on the mainly route of transmission is through airborne, higher population density would bring higher concentration of virus in the air. It could be proved from our result, that country having very dense population density and very high human development index would have the highest mean of confirmed cases amount among all these countries/areas in the world. 
+
+Besides, we could discover from the result, countries having very high human development index level would have relatively larger mean amount of cases, compared to other HDI level. This may because within these countries, higher human development index level means higher economic level, they are more likely to have entertainment needs and travel needs. These will lead to higher probability of infection of virus. 
+
+As we looked into our results, there is a special case that 'very sparse' population density level have highest average amount of cases, for example Iceland and Australia. This may because In Australia, population are mainly live in the main cities such as Sydney and Melbourne, most of the country's area don't have anyone live in. Also, even if the population density is low, there could still be clustering affection within each family if one member of a family get infected. Therefore as we are using population density for the whole country, high population density city would be averaged by other area, which will mislead to a wrong category for these kind of country. 
+
+There is an important variable which could also have significant influence on the confirmed cases would be the policy of each government. We could see that for those countries posting severe regulation on travel and Aggregation activities, the pandemic would looks relatively mild. And for those country have strict vaccination policy, such as let every people get vaccinated, would have a better effect on controlling the pandemic. Therefore it's hard to analyze the factor which would have significant impact on pandemic by only 2 factors. The analysis would be optimized if we could add more variables such as weather, population density within megacity, 
+various type, vaccination rate, etc. 
+
+<br>
+<br>
 
 ***
-## Discussion & Limitation
 
-1. different country have different policy. 
-2. people from poor area may not have enough attention on the pandemic. 
-3. people's regular life cannot be garanteed, how could they consider the illness of this kind of uncontrolable disease. 
-4. hard to quaranteen infected people, thus population density cannot reprensent each family. It may have cluster of infection within each family. 
-
-
-***
 ## Acknowledgement {-}
 
 Xinyi Li, Xinyue Hu, Xiquan Jiang, Xiaoran Zhu
 
+<br>
+<br>
+
 ***
+
 ## Reference {-}
 
-The covid dataset: https://covid19.who.int/WHO-COVID-19-global-data.csv
+List of countries by population density. (2021, August 23). Retrieved March 14, 2022, from https://statisticstimes.com/demographics/countries-by-population-density.php
 
-The Population density dataset: https://ourworldindata.org/coronavirus
+Hubbard, K. (2021, December 14). Countries without reported COVID-19 cases | best countries ... Retrieved March 14, 2022, from https://www.usnews.com/news/best-countries/slideshows/countries-without-reported-covid-19-cases
 
-The iso code dataset: https://www.iso.org/obp/ui/#search
+Wong, D., & Li, Y. (2020, December 23). Spreading of COVID-19: Density matters. Retrieved March 14, 2022, from https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0242398
 
-HDI dataset: https://ourworldindata.org/human-development-index
+(n.d.). Retrieved March 14, 2022, from https://www.epa.gov/coronavirus/indoor-air-and-coronavirus-covid-19#:~:text=Spread%20of%20COVID%2D19,coughing%2C%20sneezing).
 
-https://worldpopulationreview.com/country-rankings/hdi-by-country
-
-https://en.populationdata.net/rankings/hdi/
-
-https://statisticstimes.com/demographics/countries-by-population-density.php
-
-https://www.usnews.com/news/best-countries/slideshows/countries-without-reported-covid-19-cases?slide=5
-
-https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0242398
-
-https://www.epa.gov/coronavirus/indoor-air-and-coronavirus-covid-19#:~:text=Spread%20of%20COVID%2D19,coughing%2C%20sneezing).
 
 ## Appendix - R Code{-}
 
