@@ -1,7 +1,8 @@
 # Analysis on Factors Affecting the Confirmed Cases Amount of COVID-19
 
 ## University of California, Davis STA207 project 
-Language being used: R studio
+
+### Language being used: R studio
 
 This project shows an analysis on influence of different human development degree and population density level on the growth of COVID-19 new cases using two-way ANOVA model. 
 
